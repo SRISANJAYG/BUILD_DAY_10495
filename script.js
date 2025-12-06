@@ -1,132 +1,219 @@
-// Selected Elements
-const startBtn = document.querySelector("#start-btn");
-const stopBtn = document.querySelector("#stop-btn");
-const saveBtn = document.querySelector("#save-btn");
-const textPad = document.querySelector("#text-pad");
-const notesContainer = document.querySelector("#notes-list");
-const statusText = document.querySelector("#status");
-
-// Array to store notes (State)
-let notesArr = [];
-
-// Setup Speech API
-const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-const recognition = new SpeechRecognition();
-
-recognition.continuous = true;
-recognition.interimResults = true;
-
-// 1. Init: Load Notes from Local Storage
-function init() {
-  const LSnotes = localStorage.getItem("mySpeechNotes");
-  
-  if (LSnotes !== null) {
-    notesArr = JSON.parse(LSnotes); // Update our array with saved data
-    
-    // Create UI for each saved note
-    notesArr.forEach(function (noteText) {
-      generateNote(noteText);
-    });
-  }
-}
-init();
-
-// 2. Speech Events (Listening)
-recognition.addEventListener("result", function (e) {
-  // Convert results to a string
-  const transcript = Array.from(e.results)
-    .map((result) => result[0])
-    .map((result) => result.transcript)
-    .join("");
-
-  textPad.value = transcript;
-});
-
-// UI Feedback for Start/Stop
-recognition.addEventListener("start", function () {
-  statusText.innerText = "Listening... 🟢";
-  textPad.style.borderColor = "lightgreen";
-});
-
-recognition.addEventListener("end", function () {
-  statusText.innerText = "Click Start to speak";
-  textPad.style.borderColor = "#ccc";
-});
-
-// 3. Button Events
-startBtn.addEventListener("click", function () {
-  recognition.start();
-  startBtn.disabled = true;
-  stopBtn.disabled = false;
-});
-
-stopBtn.addEventListener("click", function () {
-  recognition.stop();
-  startBtn.disabled = false;
-  stopBtn.disabled = true;
-});
-
-// 4. Save Note Event
-saveBtn.addEventListener("click", function () {
-  const text = textPad.value;
-
-  // Only save if text is not empty
-  if (text.trim().length > 0) {
-    
-    // 1. Add to DOM
-    generateNote(text);
-
-    // 2. Add to Array
-    notesArr.push(text);
-
-    // 3. Save to Local Storage
-    localStorage.setItem("mySpeechNotes", JSON.stringify(notesArr));
-
-    // 4. Clear Input
-    textPad.value = "";
-  }
-});
-
-// 5. Generate Note Function (DOM Creation)
-function generateNote(text) {
-  const noteDiv = document.createElement("div");
-  noteDiv.setAttribute("class", "note-item");
-
-  // Simple HTML structure inside the note
-  noteDiv.innerHTML = `
-    <p class="note-text">${text}</p>
-    <button class="delete-btn">Delete</button>
-  `;
-
-  notesContainer.appendChild(noteDiv);
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
 }
 
-// 6. Delete Logic (Event Delegation)
-// We attach the listener to the container, not individual buttons
-notesContainer.addEventListener("click", function (e) {
-  
-  if (e.target.classList.contains("delete-btn")) {
-    const button = e.target;
-    const noteDiv = button.parentElement;
-    
-    // Get text to remove it from Array/Storage
-    const textToRemove = noteDiv.querySelector(".note-text").innerText;
-    
-    // Remove from DOM
-    noteDiv.remove();
+body {
+    font-family: "Poppins", sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    color: #333;
+    padding: 20px;
+}
 
-    // Remove from Array and Update Storage
-    handleDeleteStorage(textToRemove);
-  }
-});
+.container {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 40px;
+    border-radius: 24px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    width: 950px; 
+    max-width: 100%;
+    height: 600px;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(10px);
+    display: grid;
+    grid-template-columns: 1.4fr 0.8fr; 
+    column-gap: 40px;
+    grid-template-rows: auto auto 1fr auto;
+    grid-template-areas: 
+        "header  note-title"
+        "desc    note-list"
+        "input   note-list"
+        "btns    note-list";
+    align-items: start;
+}
 
-// Helper to update Local Storage after delete
-function handleDeleteStorage(text) {
-  const idx = notesArr.indexOf(text);
-  
-  if (idx > -1) {
-    notesArr.splice(idx, 1); // Remove item from array
-  }
-  
-  localStorage.setItem("mySpeechNotes", JSON.stringify(notesArr));
+.app-title {
+    grid-area: header;
+    margin: 0 0 5px;
+    color: #2d3748;
+    font-weight: 700;
+    font-size: 26px;
+}
+
+#status {
+    grid-area: desc;
+    margin: 0 0 20px;
+    font-size: 14px;
+    color: #718096;
+}
+
+textarea {
+    grid-area: input;
+    width: 100%;
+    height: 100%;
+    padding: 18px;
+    border: 2px solid #e2e8f0;
+    border-radius: 16px;
+    resize: none;
+    font-size: 15px;
+    font-family: inherit;
+    background: #f7fafc;
+    color: #2d3748;
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+textarea:focus {
+    border-color: #667eea;
+    background: #ffffff;
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15);
+}
+
+.buttons {
+    grid-area: btns;
+    margin-top: 25px;
+    display: flex;
+    gap: 12px;
+}
+
+button {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: #ffffff;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+#start-btn { background: linear-gradient(135deg, #0ba360 0%, #3cba92 100%); }
+#stop-btn  { background: linear-gradient(135deg, #ff512f 0%, #dd2476 100%); }
+#save-btn  { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+
+button:hover:not(:disabled) { transform: translateY(-2px); }
+button:disabled { background: #cbd5e0; cursor: not-allowed; box-shadow: none; }
+
+.notes-header {
+    grid-area: note-title;
+    margin: 0 0 15px;
+    padding-bottom: 10px;
+    font-size: 16px;
+    color: #4a5568;
+    font-weight: 700;
+    text-transform: uppercase;
+    border-bottom: 2px solid #edf2f7;
+}
+
+#notes-list {
+    grid-area: note-list;
+    height: 100%;
+    overflow-y: auto;
+    padding-right: 8px;
+}
+
+#notes-list::-webkit-scrollbar { width: 5px; }
+#notes-list::-webkit-scrollbar-thumb { background: #cbd5e0; border-radius: 10px; }
+
+.note-item {
+    background: #ffffff;
+    margin-bottom: 12px;
+    padding: 15px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    border-left: 5px solid #667eea;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 15px;
+    transition: transform 0.2s ease;
+}
+
+.note-item:hover {
+    transform: translateX(4px);
+    border-color: #cbd5e0;
+}
+
+.note-text {
+    flex: 1;
+    font-size: 13px;
+    color: #4a5568;
+    margin: 0;
+    word-break: break-word;
+}
+
+.delete-btn {
+    background: #fff5f5;
+    color: #c53030;
+    border: 1px solid #fed7d7;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border-radius: 6px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    flex-shrink: 0;
+    box-shadow: none;
+}
+
+.delete-btn:hover {
+    background: #e53e3e;
+    color: white;
+    border-color: #e53e3e;
+}
+
+@media (max-width: 768px) {
+    .container {
+        grid-template-columns: 1fr;
+        height: auto;
+        grid-template-areas: "header" "desc" "input" "btns" "note-title" "note-list";
+    }
+    textarea { height: 180px; }
+    #notes-list { max-height: 300px; }
+}
+
+.custom-context-menu {
+    display: none;
+    position: absolute;
+    z-index: 1000;
+    width: 160px;
+    background: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    border: 1px solid #e2e8f0;
+    overflow: hidden;
+    animation: fadeIn 0.1s ease-out;
+}
+
+.menu-item {
+    padding: 12px 15px;
+    font-size: 13px;
+    color: #4a5568;
+    cursor: pointer;
+    transition: background 0.1s;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.menu-item:hover {
+    background: #edf2f7;
+    color: #2d3748;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
 }
